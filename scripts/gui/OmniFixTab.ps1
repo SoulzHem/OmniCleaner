@@ -63,6 +63,11 @@ function Initialize-OmniFixTab {
 	$script:chkFixPolicies.AutoSize = $true
 	$script:chkFixPolicies.Location = New-Object System.Drawing.Point(400,82)
 
+	$script:chkFixWU = New-Object System.Windows.Forms.CheckBox
+	$script:chkFixWU.Text = 'Repair Windows Update (SoftwareDistribution/catroot2)'
+	$script:chkFixWU.AutoSize = $true
+	$script:chkFixWU.Location = New-Object System.Drawing.Point(400,108)
+
 	$script:btnRunFixes = New-Object System.Windows.Forms.Button
 	$script:btnRunFixes.Text = 'Run fixes'
 	$script:btnRunFixes.Size = New-Object System.Drawing.Size(160,30)
@@ -89,6 +94,7 @@ function Initialize-OmniFixTab {
 		$script:chkFixBits,
 		$script:chkFixShell,
 		$script:chkFixPolicies,
+		$script:chkFixWU,
 		$script:btnRunFixes,
 		$script:txtFixLog
 	))
@@ -120,6 +126,7 @@ function Initialize-OmniFixTab {
 			if ($chkFixBits.Checked)    { $tasks += 'bits' }
 			if ($chkFixShell.Checked)   { $tasks += 'shell' }
 			if ($chkFixPolicies.Checked){ $tasks += 'policies' }
+			if ($chkFixWU.Checked)      { $tasks += 'wu' }
 			if ($tasks.Count -eq 0) { Add-FixLogLine 'Select at least one fix.'; return }
 
 			Add-FixLogLine ('Running fixes: ' + ($tasks -join ', '))
@@ -143,6 +150,9 @@ function Initialize-OmniFixTab {
 							try {
 								reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyEnable /t REG_DWORD /d 0 /f | Out-Null
 								reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyServer /f 2>$null | Out-Null
+								reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v AutoConfigURL /f 2>$null | Out-Null
+								reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v AutoDetect /t REG_DWORD /d 0 /f | Out-Null
+								try { netsh winhttp reset proxy | Out-Null } catch {}
 								say '[OK] Proxy disabled'
 							} catch { say ("[ERR] Proxy: " + $_.Exception.Message) }
 						}
@@ -224,6 +234,24 @@ function Initialize-OmniFixTab {
 								}
 							}
 							say '[OK] Policies cleaned'
+						}
+						'wu' {
+							say '[FIX] Repairing Windows Update components'
+							try {
+								# Stop services
+								foreach ($svc in 'wuauserv','bits','cryptsvc','msiserver') { try { net stop $svc /y | Out-Null } catch {} }
+								# Rename folders
+								$ts = (Get-Date).ToString('yyyyMMdd_HHmmss')
+								$sd  = Join-Path $env:WinDir 'SoftwareDistribution'
+								$sdB = Join-Path $env:WinDir ("SoftwareDistribution.bak_" + $ts)
+								$cr2 = Join-Path $env:WinDir 'System32\catroot2'
+								$cr2B= Join-Path $env:WinDir ("System32\catroot2.bak_" + $ts)
+								try { if (Test-Path $sd)  { Rename-Item -LiteralPath $sd  -NewName (Split-Path -Leaf $sdB)  -Force } } catch {}
+								try { if (Test-Path $cr2) { Rename-Item -LiteralPath $cr2 -NewName (Split-Path -Leaf $cr2B) -Force } } catch {}
+								# Start services
+								foreach ($svc in 'msiserver','cryptsvc','bits','wuauserv') { try { net start $svc | Out-Null } catch {} }
+								say '[OK] Windows Update components repaired'
+							} catch { say ("[ERR] WU: " + $_.Exception.Message) }
 						}
 					}
 				}
