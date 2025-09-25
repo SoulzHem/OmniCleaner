@@ -1,0 +1,22 @@
+﻿{
+    "AllRemovable":  true,
+    "Aggressive":  true,
+    "IncludeFixed":  true,
+    "IncludeSystem":  false,
+    "WhatIf":  false,
+    "Drives":  "",
+    "DarkTheme":  true,
+    "ScanServices":  true,
+    "ScanShortcuts":  true,
+    "ScanPayloads":  true,
+    "ScanRegistry":  true,
+    "Quarantine":  true,
+    "UsbHeuristics":  true,
+    "DoTasks":  true,
+    "DoWmi":  true,
+    "DoLnk":  true,
+    "AdvEnableActions":  true,
+    "AdvClosePorts":  false,
+    "AdvRiskPorts":  "135,139,445,3389,5900,23",
+    "AdvWarnPorts":  "21,22,25,1433,3306"
+}

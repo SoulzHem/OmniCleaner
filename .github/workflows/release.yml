@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare artifact
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'SilentlyContinue'
+          New-Item -ItemType Directory -Path scripts/logs -Force | Out-Null
+          New-Item -ItemType Directory -Path scripts/quarantine -Force | Out-Null
+          if (Test-Path OmniCleaner.zip) { Remove-Item OmniCleaner.zip -Force }
+          $paths = @(
+            'scripts',
+            'RunCleanerGUI.bat',
+            'Setup.ps1',
+            'README.md'
+          )
+          Compress-Archive -Path $paths -DestinationPath OmniCleaner.zip -Force
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            OmniCleaner.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
