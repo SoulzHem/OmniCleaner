@@ -16,6 +16,15 @@ OmniCleaner, Windows için kapsamlı bir güvenlik ve temizlik aracıdır. USB k
   - Şüpheli süreç analizi
 - **Gelişmiş aksiyonlar (isteğe bağlı ve riskli)**:
   - Riskli açık portları kapatma (seçili portlar kırmızı vurgulanır)
+- **OmniFix (güvenli düzeltmeler)**:
+  - Hosts dosyasını varsayılana sıfırla
+  - Sistem proxy’sini kapat (WinINET reset)
+  - DNS önbelleğini temizle, adaptör DNS adreslerini sıfırla (DHCP)
+  - Winsock ve TCP/IP sıfırla (yeniden başlatma gerekebilir)
+  - Windows Güvenlik Duvarı’nı sıfırla
+  - TEMP klasörlerini temizle (kullanıcı/sistem)
+  - Autorun/Autoplay devre dışı
+  - Dosya ilişkilendirmelerini onar (.lnk, .exe, .reg)
 - **Tema**: Aydınlık/Karanlık tema, Advanced sayfası dahil tutarlı görünüm
 - **Log rotasyonu**: Eski `omnicleaner.log` otomatik `scripts/logs/` klasörüne arşivlenir
 - **Ayarlar**: `gui_settings.json` ile kalıcı kullanıcı ayarları
@@ -45,6 +54,10 @@ irm 'https://raw.githubusercontent.com/SoulzHem/OmniCleaner/main/bootstrap.ps1' 
 ```powershell
 iwr -useb 'https://raw.githubusercontent.com/SoulzHem/OmniCleaner/main/bootstrap.ps1' | iex; bootstrap -Cleanup
 ```
+
+### OmniFix nasıl kullanılır?
+
+GUI’de `OmniFix` sekmesini açın, uygulamak istediğiniz düzeltmeleri işaretleyin ve `Run fixes` butonuna basın. İşlemler log alanına ve ana log dosyasına yazılır.
 
 ## Komut Satırı Kullanımı
 
@@ -125,6 +138,15 @@ OmniCleaner is a comprehensive security and cleanup tool for Windows. It focuses
   - Suspicious process scanning
 - Advanced actions (optional and dangerous):
   - Close risky open ports (highlighted in red in the UI)
+- OmniFix (safe fixes):
+  - Reset hosts file to default
+  - Disable system proxy / reset WinINET
+  - Flush DNS cache and reset adapter DNS to DHCP
+  - Reset Winsock and TCP/IP (reboot may be required)
+  - Reset Windows Firewall
+  - Clean TEMP folders (user/system)
+  - Disable Autorun/Autoplay
+  - Repair file associations (.lnk, .exe, .reg)
 - Theming: Light/Dark theme applied consistently, including Advanced tab
 - Log rotation: Old `omnicleaner.log` auto-archived under `scripts/logs/`
 - Settings: Persisted via `gui_settings.json`
@@ -152,6 +174,10 @@ Clean up temp folder after run:
 ```powershell
 iwr -useb 'https://raw.githubusercontent.com/SoulzHem/OmniCleaner/main/bootstrap.ps1' | iex; bootstrap -Cleanup
 ```
+
+### How to use OmniFix
+
+Open the `OmniFix` tab in the GUI, tick the fixes you want, then press `Run fixes`. Progress is logged both in the tab and the main log file.
 
 ### Command Line Examples
 
