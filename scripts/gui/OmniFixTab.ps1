@@ -103,9 +103,9 @@ function Initialize-OmniFixTab {
     $script:AddFixLog = {
         param([string]$line)
         try {
-            if ($txtFixLog) {
-                $action = [Action]{ $txtFixLog.AppendText($line + [Environment]::NewLine) }
-                if ($txtFixLog.InvokeRequired) { $null = $txtFixLog.BeginInvoke($action) } else { & $action }
+            if ($script:txtFixLog) {
+                $action = [Action]{ $script:txtFixLog.AppendText($line + [Environment]::NewLine) }
+                if ($script:txtFixLog.InvokeRequired) { $null = $script:txtFixLog.BeginInvoke($action) } else { & $action }
             }
         } catch {}
     }
