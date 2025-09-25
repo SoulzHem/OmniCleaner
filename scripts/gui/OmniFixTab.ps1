@@ -47,6 +47,22 @@ function Initialize-OmniFixTab {
 	$script:chkFixAssoc.AutoSize = $true
 	$script:chkFixAssoc.Location = New-Object System.Drawing.Point(20,212)
 
+	# New safe fixes
+	$script:chkFixBits = New-Object System.Windows.Forms.CheckBox
+	$script:chkFixBits.Text = 'Repair BITS/WUA services (set defaults, start)'
+	$script:chkFixBits.AutoSize = $true
+	$script:chkFixBits.Location = New-Object System.Drawing.Point(400,30)
+
+	$script:chkFixShell = New-Object System.Windows.Forms.CheckBox
+	$script:chkFixShell.Text = 'Restore Explorer shell & enable Task Manager'
+	$script:chkFixShell.AutoSize = $true
+	$script:chkFixShell.Location = New-Object System.Drawing.Point(400,56)
+
+	$script:chkFixPolicies = New-Object System.Windows.Forms.CheckBox
+	$script:chkFixPolicies.Text = 'Clean restrictive Policies (DisableRegistryTools, etc.)'
+	$script:chkFixPolicies.AutoSize = $true
+	$script:chkFixPolicies.Location = New-Object System.Drawing.Point(400,82)
+
 	$script:btnRunFixes = New-Object System.Windows.Forms.Button
 	$script:btnRunFixes.Text = 'Run fixes'
 	$script:btnRunFixes.Size = New-Object System.Drawing.Size(160,30)
@@ -70,6 +86,9 @@ function Initialize-OmniFixTab {
 		$script:chkFixTemp,
 		$script:chkFixAutorun,
 		$script:chkFixAssoc,
+		$script:chkFixBits,
+		$script:chkFixShell,
+		$script:chkFixPolicies,
 		$script:btnRunFixes,
 		$script:txtFixLog
 	))
@@ -98,6 +117,9 @@ function Initialize-OmniFixTab {
 			if ($chkFixTemp.Checked)    { $tasks += 'temp' }
 			if ($chkFixAutorun.Checked) { $tasks += 'autorun' }
 			if ($chkFixAssoc.Checked)   { $tasks += 'assoc' }
+			if ($chkFixBits.Checked)    { $tasks += 'bits' }
+			if ($chkFixShell.Checked)   { $tasks += 'shell' }
+			if ($chkFixPolicies.Checked){ $tasks += 'policies' }
 			if ($tasks.Count -eq 0) { Add-FixLogLine 'Select at least one fix.'; return }
 
 			Add-FixLogLine ('Running fixes: ' + ($tasks -join ', '))
@@ -170,6 +192,38 @@ function Initialize-OmniFixTab {
 								reg add "HKLM\SOFTWARE\Classes\.reg" /ve /d regfile /f | Out-Null
 								say '[OK] Associations repaired'
 							} catch { say ("[ERR] Assoc: " + $_.Exception.Message) }
+						}
+						'bits' {
+							say '[FIX] Repairing BITS/WUA services'
+							try {
+								$services = 'BITS','wuauserv'
+								foreach ($svc in $services) {
+									try { sc.exe config $svc start= demand | Out-Null } catch {}
+                                    try { sc.exe sdset $svc "D:(A;;CCLCSWLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWRPWPDTLOCRRC;;;AU)" | Out-Null } catch {}
+									try { net start $svc | Out-Null } catch {}
+								}
+								say '[OK] BITS/WUA set and started (where applicable)'
+							} catch { say ("[ERR] BITS/WUA: " + $_.Exception.Message) }
+						}
+						'shell' {
+							say '[FIX] Restoring Explorer shell and enabling Task Manager'
+							try { reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d explorer.exe /f | Out-Null } catch {}
+							try { reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableTaskMgr /t REG_DWORD /d 0 /f | Out-Null } catch {}
+							say '[OK] Shell/Task Manager restored'
+						}
+						'policies' {
+							say '[FIX] Cleaning restrictive Policies'
+							$keys = @(
+								"HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System",
+								"HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\System"
+							)
+							$valuesToZero = @('DisableRegistryTools','DisableTaskMgr','DisableCMD','DisableSR','DisableChangePassword')
+							foreach ($k in $keys) {
+								foreach ($v in $valuesToZero) {
+									try { reg add $k /v $v /t REG_DWORD /d 0 /f | Out-Null } catch {}
+								}
+							}
+							say '[OK] Policies cleaned'
 						}
 					}
 				}
