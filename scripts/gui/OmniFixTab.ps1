@@ -68,6 +68,11 @@ function Initialize-OmniFixTab {
 	$script:chkFixWU.AutoSize = $true
 	$script:chkFixWU.Location = New-Object System.Drawing.Point(400,108)
 
+	$script:chkFixServices = New-Object System.Windows.Forms.CheckBox
+	$script:chkFixServices.Text = 'Check core services (BFE, MpsSvc, Dhcp, Dnscache)'
+	$script:chkFixServices.AutoSize = $true
+	$script:chkFixServices.Location = New-Object System.Drawing.Point(400,134)
+
 	$script:btnRunFixes = New-Object System.Windows.Forms.Button
 	$script:btnRunFixes.Text = 'Run fixes'
 	$script:btnRunFixes.Size = New-Object System.Drawing.Size(160,30)
@@ -95,6 +100,7 @@ function Initialize-OmniFixTab {
 		$script:chkFixShell,
 		$script:chkFixPolicies,
 		$script:chkFixWU,
+		$script:chkFixServices,
 		$script:btnRunFixes,
 		$script:txtFixLog
 	))
@@ -127,6 +133,7 @@ function Initialize-OmniFixTab {
 			if ($chkFixShell.Checked)   { $tasks += 'shell' }
 			if ($chkFixPolicies.Checked){ $tasks += 'policies' }
 			if ($chkFixWU.Checked)      { $tasks += 'wu' }
+			if ($chkFixServices.Checked){ $tasks += 'services' }
             if ($tasks.Count -eq 0) { & $script:AddFixLog 'Select at least one fix.'; return }
 
             & $script:AddFixLog ('Running fixes: ' + ($tasks -join ', '))
@@ -252,6 +259,27 @@ function Initialize-OmniFixTab {
 								foreach ($svc in 'msiserver','cryptsvc','bits','wuauserv') { try { net start $svc | Out-Null } catch {} }
 								say '[OK] Windows Update components repaired'
 							} catch { say ("[ERR] WU: " + $_.Exception.Message) }
+						}
+						'services' {
+							say '[CHECK] Verifying core services (BFE, MpsSvc, Dhcp, Dnscache)'
+							$svcList = @(
+								@{ Name='BFE';      Start='auto'   },
+								@{ Name='MpsSvc';   Start='auto'   },
+								@{ Name='Dhcp';     Start='auto'   },
+								@{ Name='Dnscache'; Start='auto'   }
+							)
+							foreach ($s in $svcList) {
+								try {
+									$nm = $s.Name
+									$st = Get-Service -Name $nm -ErrorAction Stop
+									say ("[SERVICE] " + $nm + " state=" + $st.Status)
+									# StartType ayarlamaları için sc.exe kullan
+									try { sc.exe config $nm start= $($s.Start) | Out-Null } catch {}
+									if ($st.Status -ne 'Running') { try { Start-Service -Name $nm -ErrorAction SilentlyContinue } catch {} }
+									say ("[OK] " + $nm + " configured to start=" + $($s.Start))
+								} catch { say ("[ERR] Service " + $s.Name + ": " + $_.Exception.Message) }
+							}
+							say '[OK] Core services verified'
 						}
 					}
 				}
