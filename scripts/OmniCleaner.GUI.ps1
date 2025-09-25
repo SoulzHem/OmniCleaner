@@ -28,6 +28,7 @@ try {
 	. "$PSScriptRoot\gui\Settings.ps1"
     . "$PSScriptRoot\gui\CleanTab.ps1"
     . "$PSScriptRoot\gui\AdvancedTab.ps1"
+    . "$PSScriptRoot\gui\OmniFixTab.ps1"
     . "$PSScriptRoot\gui\Quarantine.ps1"
 } catch {}
 
@@ -103,12 +104,18 @@ $tabAdvanced = New-Object System.Windows.Forms.TabPage
 $tabAdvanced.Text = 'Advanced'
 Enable-TextRenderingIfAvailable $tabAdvanced
 
-$tabs.TabPages.AddRange(@($tabClean,$tabAdvanced,$tabLog))
+$tabFix = New-Object System.Windows.Forms.TabPage
+$tabFix.Text = 'OmniFix'
+Enable-TextRenderingIfAvailable $tabFix
+
+$tabs.TabPages.AddRange(@($tabClean,$tabFix,$tabAdvanced,$tabLog))
 
 # Build Clean tab via module
 Initialize-CleanTab
 
 Initialize-AdvancedTab
+
+Initialize-OmniFixTab
 
 # Advanced scan click (log-only)
 $btnAdvScan.Add_Click({

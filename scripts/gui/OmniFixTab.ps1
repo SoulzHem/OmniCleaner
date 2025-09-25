@@ -1,0 +1,197 @@
+function Initialize-OmniFixTab {
+	# OmniFix safe fixes tab
+	$script:grpFix = New-Object System.Windows.Forms.GroupBox
+	$script:grpFix.Text = 'OmniFix safe fixes'
+	$script:grpFix.Location = New-Object System.Drawing.Point(10,10)
+	$script:grpFix.Size = New-Object System.Drawing.Size(800,520)
+	$script:grpFix.Anchor = 'Top,Left,Right'
+	Enable-TextRenderingIfAvailable $script:grpFix
+
+	$script:chkFixHosts = New-Object System.Windows.Forms.CheckBox
+	$script:chkFixHosts.Text = 'Reset hosts file (default)'
+	$script:chkFixHosts.AutoSize = $true
+	$script:chkFixHosts.Location = New-Object System.Drawing.Point(20,30)
+
+	$script:chkFixProxy = New-Object System.Windows.Forms.CheckBox
+	$script:chkFixProxy.Text = 'Disable system proxy / reset WinINET'
+	$script:chkFixProxy.AutoSize = $true
+	$script:chkFixProxy.Location = New-Object System.Drawing.Point(20,56)
+
+	$script:chkFixDns = New-Object System.Windows.Forms.CheckBox
+	$script:chkFixDns.Text = 'Flush DNS cache and reset adapter DNS (auto)'
+	$script:chkFixDns.AutoSize = $true
+	$script:chkFixDns.Location = New-Object System.Drawing.Point(20,82)
+
+	$script:chkFixWinsock = New-Object System.Windows.Forms.CheckBox
+	$script:chkFixWinsock.Text = 'Reset Winsock & TCP/IP'
+	$script:chkFixWinsock.AutoSize = $true
+	$script:chkFixWinsock.Location = New-Object System.Drawing.Point(20,108)
+
+	$script:chkFixFirewall = New-Object System.Windows.Forms.CheckBox
+	$script:chkFixFirewall.Text = 'Reset Windows Firewall (policies)'
+	$script:chkFixFirewall.AutoSize = $true
+	$script:chkFixFirewall.Location = New-Object System.Drawing.Point(20,134)
+
+	$script:chkFixTemp = New-Object System.Windows.Forms.CheckBox
+	$script:chkFixTemp.Text = 'Clean TEMP folders (user/system)'
+	$script:chkFixTemp.AutoSize = $true
+	$script:chkFixTemp.Location = New-Object System.Drawing.Point(20,160)
+
+	$script:chkFixAutorun = New-Object System.Windows.Forms.CheckBox
+	$script:chkFixAutorun.Text = 'Disable Autorun/Autoplay'
+	$script:chkFixAutorun.AutoSize = $true
+	$script:chkFixAutorun.Location = New-Object System.Drawing.Point(20,186)
+
+	$script:chkFixAssoc = New-Object System.Windows.Forms.CheckBox
+	$script:chkFixAssoc.Text = 'Repair common file associations (.lnk, .exe, .reg)'
+	$script:chkFixAssoc.AutoSize = $true
+	$script:chkFixAssoc.Location = New-Object System.Drawing.Point(20,212)
+
+	$script:btnRunFixes = New-Object System.Windows.Forms.Button
+	$script:btnRunFixes.Text = 'Run fixes'
+	$script:btnRunFixes.Size = New-Object System.Drawing.Size(160,30)
+	$script:btnRunFixes.Location = New-Object System.Drawing.Point(20,248)
+
+	$script:txtFixLog = New-Object System.Windows.Forms.RichTextBox
+	$script:txtFixLog.Multiline = $true
+	$script:txtFixLog.ReadOnly = $true
+	$script:txtFixLog.WordWrap = $true
+	$script:txtFixLog.ScrollBars = 'Vertical'
+	$script:txtFixLog.Location = New-Object System.Drawing.Point(20,292)
+	$script:txtFixLog.Size = New-Object System.Drawing.Size(760,200)
+	$script:txtFixLog.Anchor = 'Top,Left,Right'
+
+	$script:grpFix.Controls.AddRange(@(
+		$script:chkFixHosts,
+		$script:chkFixProxy,
+		$script:chkFixDns,
+		$script:chkFixWinsock,
+		$script:chkFixFirewall,
+		$script:chkFixTemp,
+		$script:chkFixAutorun,
+		$script:chkFixAssoc,
+		$script:btnRunFixes,
+		$script:txtFixLog
+	))
+	$tabFix.Controls.Add($script:grpFix)
+
+	function Add-FixLogLine {
+		param([string]$line)
+		try {
+			if ($txtFixLog) {
+				$action = [Action]{ $txtFixLog.AppendText($line + [Environment]::NewLine) }
+				if ($txtFixLog.InvokeRequired) { $null = $txtFixLog.BeginInvoke($action) } else { & $action }
+			}
+		} catch {}
+	}
+
+	$script:btnRunFixes.Add_Click({
+		try {
+			if ($tabs -and $tabFix) { $tabs.SelectedTab = $tabFix }
+			if ($txtFixLog) { $txtFixLog.Clear() }
+			$tasks = @()
+			if ($chkFixHosts.Checked)   { $tasks += 'hosts' }
+			if ($chkFixProxy.Checked)   { $tasks += 'proxy' }
+			if ($chkFixDns.Checked)     { $tasks += 'dns' }
+			if ($chkFixWinsock.Checked) { $tasks += 'winsock' }
+			if ($chkFixFirewall.Checked){ $tasks += 'firewall' }
+			if ($chkFixTemp.Checked)    { $tasks += 'temp' }
+			if ($chkFixAutorun.Checked) { $tasks += 'autorun' }
+			if ($chkFixAssoc.Checked)   { $tasks += 'assoc' }
+			if ($tasks.Count -eq 0) { Add-FixLogLine 'Select at least one fix.'; return }
+
+			Add-FixLogLine ('Running fixes: ' + ($tasks -join ', '))
+			Set-UiBusy $true
+			$job = Start-Job -ScriptBlock {
+				param($selected)
+				function say($m){ Write-Output $m }
+				try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false) } catch {}
+				foreach ($t in $selected) {
+					switch ($t) {
+						'hosts' {
+							say '[FIX] Resetting hosts to default'
+							$hosts = "$env:WinDir\System32\drivers\etc\hosts"
+							try {
+								Set-Content -LiteralPath $hosts -Value "127.0.0.1 localhost`r`n::1 localhost`r`n" -Encoding ASCII -Force
+								say '[OK] hosts reset'
+							} catch { say ("[ERR] hosts reset: " + $_.Exception.Message) }
+						}
+						'proxy' {
+							say '[FIX] Disabling system proxy / WinINET'
+							try {
+								reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyEnable /t REG_DWORD /d 0 /f | Out-Null
+								reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyServer /f 2>$null | Out-Null
+								say '[OK] Proxy disabled'
+							} catch { say ("[ERR] Proxy: " + $_.Exception.Message) }
+						}
+						'dns' {
+							say '[FIX] Flushing DNS and resetting adapters to DHCP DNS'
+							try { ipconfig /flushdns | Out-Null } catch {}
+							try {
+								Get-DnsClientServerAddress -AddressFamily IPv4 | ForEach-Object {
+									try { Set-DnsClientServerAddress -InterfaceIndex $_.InterfaceIndex -ResetServerAddresses -ErrorAction Stop } catch {}
+								}
+								say '[OK] DNS reset'
+							} catch { say ("[ERR] DNS: " + $_.Exception.Message) }
+						}
+						'winsock' {
+							say '[FIX] Resetting Winsock and TCP/IP'
+							try { netsh winsock reset | Out-Null } catch {}
+							try { netsh int ip reset | Out-Null } catch {}
+							say '[OK] Winsock/TCP reset (reboot may be required)'
+						}
+						'firewall' {
+							say '[FIX] Resetting Windows Firewall'
+							try { netsh advfirewall reset | Out-Null; say '[OK] Firewall reset' } catch { say ("[ERR] Firewall: " + $_.Exception.Message) }
+						}
+						'temp' {
+							say '[FIX] Cleaning TEMP folders'
+							try { Get-ChildItem "$env:TEMP" -Force -Recurse -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue } catch {}
+							try { Get-ChildItem "$env:WinDir\Temp" -Force -Recurse -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue } catch {}
+							say '[OK] TEMP cleaned'
+						}
+						'autorun' {
+							say '[FIX] Disabling Autorun/Autoplay'
+							try {
+								reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v NoDriveTypeAutoRun /t REG_DWORD /d 255 /f | Out-Null
+								reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v NoDriveTypeAutoRun /t REG_DWORD /d 255 /f | Out-Null
+								say '[OK] Autorun disabled'
+							} catch { say ("[ERR] Autorun: " + $_.Exception.Message) }
+						}
+						'assoc' {
+							say '[FIX] Repairing common file associations (.lnk, .exe, .reg)'
+							try {
+								# .lnk
+								reg add "HKLM\SOFTWARE\Classes\.lnk" /ve /d lnkfile /f | Out-Null
+								# .exe default shell open
+								reg add "HKLM\SOFTWARE\Classes\.exe" /ve /d exefile /f | Out-Null
+								reg add "HKLM\SOFTWARE\Classes\exefile\shell\open\command" /ve /d '"%1" %*' /f | Out-Null
+								# .reg
+								reg add "HKLM\SOFTWARE\Classes\.reg" /ve /d regfile /f | Out-Null
+								say '[OK] Associations repaired'
+							} catch { say ("[ERR] Assoc: " + $_.Exception.Message) }
+						}
+					}
+				}
+				catch { say ("[ERR] Fix job error: " + $_.Exception.Message) }
+			} -ArgumentList ($tasks)
+
+			$child = $job.ChildJobs[0]
+			$null = Register-ObjectEvent -InputObject $child.Output -EventName DataAdded -Action {
+				try {
+					$idx = $eventArgs.Index
+					$item = $event.Sender[$idx]
+					if ($item) { Add-FixLogLine (($item | Out-String).TrimEnd()) }
+					if ($item) { Write-Log (($item | Out-String).TrimEnd()) }
+				} catch {}
+			}
+			$null = Register-ObjectEvent -InputObject $job -EventName StateChanged -Action {
+				try {
+					if ($event.Sender.State -in 'Completed','Failed','Stopped') { Set-UiBusy $false }
+				} catch {}
+			}
+		} catch { Write-Log ("ERROR: Fixes failed - " + $_.Exception.Message) }
+	})
+}
+
+
