@@ -21,16 +21,18 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-# Dot-source modular components
-try {
-	. "$PSScriptRoot\gui\Logging.ps1"
-	. "$PSScriptRoot\gui\Theme.ps1"
-	. "$PSScriptRoot\gui\Settings.ps1"
-    . "$PSScriptRoot\gui\CleanTab.ps1"
-    . "$PSScriptRoot\gui\AdvancedTab.ps1"
-    . "$PSScriptRoot\gui\OmniFixTab.ps1"
-    . "$PSScriptRoot\gui\Quarantine.ps1"
-} catch {}
+# Dot-source modular components (each isolated to avoid swallowing all on one error)
+foreach ($mod in @(
+    "$PSScriptRoot\gui\Logging.ps1",
+    "$PSScriptRoot\gui\Theme.ps1",
+    "$PSScriptRoot\gui\Settings.ps1",
+    "$PSScriptRoot\gui\CleanTab.ps1",
+    "$PSScriptRoot\gui\AdvancedTab.ps1",
+    "$PSScriptRoot\gui\OmniFixTab.ps1",
+    "$PSScriptRoot\gui\Quarantine.ps1"
+)) {
+    try { . $mod } catch { try { Write-Host ("[WARN] Failed to load module: " + $mod) -ForegroundColor Yellow } catch {} }
+}
 
 # STA requirement
 try {
