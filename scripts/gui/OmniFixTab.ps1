@@ -258,6 +258,11 @@ function Initialize-OmniFixTab {
 				catch { say ("[ERR] Fix job error: " + $_.Exception.Message) }
 			} -ArgumentList ($tasks)
 
+			# Keep a reference so GC doesn't collect it
+			$script:OmniFixJob = $job
+			& $script:AddFixLog 'Fixes job launched...'
+			Write-Log 'OmniFix: fixes job launched.'
+
 			$child = $job.ChildJobs[0]
             $null = Register-ObjectEvent -InputObject $child.Output -EventName DataAdded -Action {
 				try {
@@ -267,11 +272,26 @@ function Initialize-OmniFixTab {
 					if ($item) { Write-Log (($item | Out-String).TrimEnd()) }
 				} catch {}
 			}
-			$null = Register-ObjectEvent -InputObject $job -EventName StateChanged -Action {
+			# Fallback polling to ensure UI updates even if DataAdded action misses
+			try { if ($script:FixLogTimer) { $script:FixLogTimer.Stop(); $script:FixLogTimer.Dispose() } } catch {}
+			$script:FixLogTimer = New-Object System.Windows.Forms.Timer
+			$script:FixLogTimer.Interval = 900
+			$script:FixLogTimer.Add_Tick({
 				try {
-					if ($event.Sender.State -in 'Completed','Failed','Stopped') { Set-UiBusy $false }
+					if ($script:OmniFixJob) {
+						# Drain any output
+						try {
+							$outs = Receive-Job -Job $script:OmniFixJob -Keep -ErrorAction SilentlyContinue
+							foreach ($o in $outs) { & $script:AddFixLog (($o | Out-String).TrimEnd()); Write-Log (($o | Out-String).TrimEnd()) }
+						} catch {}
+						if ($script:OmniFixJob.State -in 'Completed','Failed','Stopped') {
+							$script:FixLogTimer.Stop(); $script:FixLogTimer.Dispose()
+							Set-UiBusy $false
+						}
+					}
 				} catch {}
-			}
+			})
+			$script:FixLogTimer.Start()
 		} catch { Write-Log ("ERROR: Fixes failed - " + $_.Exception.Message) }
 	})
 }
