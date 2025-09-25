@@ -100,15 +100,15 @@ function Initialize-OmniFixTab {
 	))
 	$tabFix.Controls.Add($script:grpFix)
 
-	function Add-FixLogLine {
-		param([string]$line)
-		try {
-			if ($txtFixLog) {
-				$action = [Action]{ $txtFixLog.AppendText($line + [Environment]::NewLine) }
-				if ($txtFixLog.InvokeRequired) { $null = $txtFixLog.BeginInvoke($action) } else { & $action }
-			}
-		} catch {}
-	}
+    $script:AddFixLog = {
+        param([string]$line)
+        try {
+            if ($txtFixLog) {
+                $action = [Action]{ $txtFixLog.AppendText($line + [Environment]::NewLine) }
+                if ($txtFixLog.InvokeRequired) { $null = $txtFixLog.BeginInvoke($action) } else { & $action }
+            }
+        } catch {}
+    }
 
 	$script:btnRunFixes.Add_Click({
 		try {
@@ -127,9 +127,9 @@ function Initialize-OmniFixTab {
 			if ($chkFixShell.Checked)   { $tasks += 'shell' }
 			if ($chkFixPolicies.Checked){ $tasks += 'policies' }
 			if ($chkFixWU.Checked)      { $tasks += 'wu' }
-			if ($tasks.Count -eq 0) { Add-FixLogLine 'Select at least one fix.'; return }
+            if ($tasks.Count -eq 0) { & $script:AddFixLog 'Select at least one fix.'; return }
 
-			Add-FixLogLine ('Running fixes: ' + ($tasks -join ', '))
+            & $script:AddFixLog ('Running fixes: ' + ($tasks -join ', '))
 			Set-UiBusy $true
 			$job = Start-Job -ScriptBlock {
 				param($selected)
@@ -259,11 +259,11 @@ function Initialize-OmniFixTab {
 			} -ArgumentList ($tasks)
 
 			$child = $job.ChildJobs[0]
-			$null = Register-ObjectEvent -InputObject $child.Output -EventName DataAdded -Action {
+            $null = Register-ObjectEvent -InputObject $child.Output -EventName DataAdded -Action {
 				try {
 					$idx = $eventArgs.Index
 					$item = $event.Sender[$idx]
-					if ($item) { Add-FixLogLine (($item | Out-String).TrimEnd()) }
+                    if ($item) { & $script:AddFixLog (($item | Out-String).TrimEnd()) }
 					if ($item) { Write-Log (($item | Out-String).TrimEnd()) }
 				} catch {}
 			}
