@@ -1,0 +1,9 @@
+﻿[2025-09-25 08:25:30] [GUI] Invoke-Clean baÅŸlatÄ±lÄ±yor
+----- SESSION 2025-09-25 08:25:31 -----
+[2025-09-25 08:25:31] [INFO] OmniCleaner baÅŸlatÄ±ldÄ± (WhatIf=False, Aggressive=True, ScanOnly=True)
+[2025-09-25 08:25:31] [INFO] [MODE] Dry run (scan only) - No changes will be made.
+[2025-09-25 08:25:31] [INFO] Scope: Services=True, Shortcuts=False, Payloads=False, Registry=False
+[2025-09-25 08:25:31] [INFO] Advanced: Tasks=False, WMI=False, LNKAnalyze=False
+[2025-09-25 08:25:31] [INFO] [SCAN] Services would be scanned.
+[2025-09-25 08:25:32] [WARN] Hedef sÃ¼rÃ¼cÃ¼ bulunamadÄ±. -AllRemovable ve/veya -Targets kullanÄ±n.
+[2025-09-25 08:25:32] [INFO] Temizlik tamamlandÄ±.
