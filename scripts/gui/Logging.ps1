@@ -21,6 +21,13 @@ function Write-Log {
 			else { $txtAdvInlineLog.AppendText($line + [Environment]::NewLine) }
 		}
 	} catch {}
+	# OmniFix inline log
+	try {
+		if ($script:txtFixLog) {
+			if ($script:txtFixLog.InvokeRequired) { $null = $script:txtFixLog.BeginInvoke([Action]{ $script:txtFixLog.AppendText($line + [Environment]::NewLine) }) }
+			else { $script:txtFixLog.AppendText($line + [Environment]::NewLine) }
+		}
+	} catch {}
 }
 
 function Write-AdvOnly {
