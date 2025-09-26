@@ -6,7 +6,7 @@ OmniCleaner, Windows için kapsamlı bir güvenlik ve temizlik aracıdır. USB k
 
 - **Temizlik**: Kısayol virüsleri, gizli dosyalar, autorun kalıntıları
 - **Karantina**: Bulunan tehditleri güvenli karantina alanına taşıma/geri yükleme
-- **Gerçek zamanlı log**: Clean ve Advanced sekmelerinde satır içi log (word wrap açık)
+- **Gerçek zamanlı log**: Clean, Advanced ve OmniFix sekmelerinde satır içi log (word wrap açık)
 - **Gelişmiş taramalar (Advanced)**:
   - Startup klasörleri inceleme
   - Hosts dosyası kontrolü
@@ -25,6 +25,14 @@ OmniCleaner, Windows için kapsamlı bir güvenlik ve temizlik aracıdır. USB k
   - TEMP klasörlerini temizle (kullanıcı/sistem)
   - Autorun/Autoplay devre dışı
   - Dosya ilişkilendirmelerini onar (.lnk, .exe, .reg)
+  - BITS/WUA servis onarımı (varsayılan izinler ve başlatma)
+  - Explorer shell geri yükleme ve Görev Yöneticisi’ni etkinleştirme
+  - Kısıtlayıcı politikaları temizleme (DisableRegistryTools, DisableTaskMgr, vb.)
+  - Windows Update onarımı (SoftwareDistribution/catroot2 klasörlerini yenileme)
+  - Çekirdek servis sağlık kontrolü ve basit onarım: BFE, MpsSvc (Firewall), Dhcp, Dnscache
+  - Tarayıcı proxy/policy hijack temizliği (IE/Edge/Chrome/Firefox)
+  - Hosts/Proxy watchdog (5 dk izleme ve uyarı)
+  - Değişiklik raporu dışa aktarımı (HTML/CSV, geri alma bilgileriyle)
 - **Tema**: Aydınlık/Karanlık tema, Advanced sayfası dahil tutarlı görünüm
 - **Log rotasyonu**: Eski `omnicleaner.log` otomatik `scripts/logs/` klasörüne arşivlenir
 - **Ayarlar**: `gui_settings.json` ile kalıcı kullanıcı ayarları
@@ -57,7 +65,7 @@ iwr -useb 'https://raw.githubusercontent.com/SoulzHem/OmniCleaner/main/bootstrap
 
 ### OmniFix nasıl kullanılır?
 
-GUI’de `OmniFix` sekmesini açın, uygulamak istediğiniz düzeltmeleri işaretleyin ve `Run fixes` butonuna basın. İşlemler log alanına ve ana log dosyasına yazılır.
+GUI’de `OmniFix` sekmesini açın, uygulamak istediğiniz düzeltmeleri işaretleyin ve `Run fixes` butonuna basın. İşlemler OmniFix sekmesindeki log alanına ve ana log dosyasına yazılır. Rapor oluşturma seçiliyse, HTML/CSV rapor TEMP klasöründe zaman damgalı bir klasöre kaydedilir.
 
 ## Komut Satırı Kullanımı
 
@@ -128,7 +136,7 @@ OmniCleaner is a comprehensive security and cleanup tool for Windows. It focuses
 
 - Cleaning: Shortcut malware, hidden files, autorun leftovers
 - Quarantine: Safely move/restore detected threats
-- Real-time logs: Inline logs with word wrap in Clean and Advanced tabs
+- Real-time logs: Inline logs with word wrap in Clean, Advanced and OmniFix tabs
 - Advanced scans (log-only):
   - Startup folders inspection
   - Hosts file inspection
@@ -147,6 +155,14 @@ OmniCleaner is a comprehensive security and cleanup tool for Windows. It focuses
   - Clean TEMP folders (user/system)
   - Disable Autorun/Autoplay
   - Repair file associations (.lnk, .exe, .reg)
+  - Repair BITS/WUA services (reset perms and start)
+  - Restore Explorer shell and enable Task Manager
+  - Clean restrictive policies (DisableRegistryTools, DisableTaskMgr, etc.)
+  - Repair Windows Update (refresh SoftwareDistribution/catroot2)
+  - Core service health check and simple repair: BFE, MpsSvc (Firewall), Dhcp, Dnscache
+  - Browser proxy/policy hijack cleanup (IE/Edge/Chrome/Firefox)
+  - Hosts/Proxy watchdog (5-minute monitoring with warnings)
+  - Change report export (HTML/CSV with rollback hints)
 - Theming: Light/Dark theme applied consistently, including Advanced tab
 - Log rotation: Old `omnicleaner.log` auto-archived under `scripts/logs/`
 - Settings: Persisted via `gui_settings.json`
@@ -177,7 +193,7 @@ iwr -useb 'https://raw.githubusercontent.com/SoulzHem/OmniCleaner/main/bootstrap
 
 ### How to use OmniFix
 
-Open the `OmniFix` tab in the GUI, tick the fixes you want, then press `Run fixes`. Progress is logged both in the tab and the main log file.
+Open the `OmniFix` tab in the GUI, tick the fixes you want, then press `Run fixes`. Progress is logged both in the tab and the main log file. If report generation is selected, HTML/CSV reports are saved to a time-stamped folder under TEMP.
 
 ### Command Line Examples
 
