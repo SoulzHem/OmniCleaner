@@ -4,6 +4,8 @@ function Set-UiStyle {
 		$mono = New-Object System.Drawing.Font('Consolas',9)
 		$txtLog.Font = $mono
 		$txtInlineLog.Font = $mono
+		try { $txtAdvInlineLog.Font = $mono } catch {}
+		try { $txtFixLog.Font = $mono } catch {}
 	} catch {}
 
 	# Renkler (tek tip teal palet)
@@ -40,6 +42,7 @@ function Set-UiStyle {
 	try { Set-ButtonStyle $btnRestoreQ $true } catch {}
 	try { Set-ButtonStyle $btnExportCsv $true } catch {}
 	try { Set-ButtonStyle $btnExportHtml $true } catch {}
+	try { Set-ButtonStyle $btnRunFixes $true } catch {}
 	# Refresh kaldırıldı
 }
 
@@ -51,14 +54,17 @@ function Set-Theme {
 		$grp = [System.Drawing.Color]::FromArgb(40,44,46)      # grup arka plan
 		$form.BackColor = $bg
 		foreach ($ctrl in @(
-			$tabs,$tabClean,$tabLog,$tabAdvanced,
+			$tabs,$tabClean,$tabLog,$tabAdvanced,$tabFix,
 			$grpOptions,$grpActions,$grpAdv,$bottomPanel,
 			$lblStatus,$lblDrives,$txtDrives,$lblDriveStatus,
-			$btnClean,$btnCancel,$btnListDrives,$btnOpenLog,$btnClearLog,$btnScan,$btnManageQ,$btnOpenExcl,$btnOpenQ,$btnRestoreQ,$btnExportCsv,$btnExportHtml,$btnAdvScan,
+			$btnClean,$btnCancel,$btnListDrives,$btnOpenLog,$btnClearLog,$btnScan,$btnManageQ,$btnOpenExcl,$btnOpenQ,$btnRestoreQ,$btnExportCsv,$btnExportHtml,$btnAdvScan,$btnRunFixes,
 			$chkAllRemovable,$chkAggressive,$chkIncludeFixed,$chkIncludeSystem,$chkWhatIf,$chkDarkTheme,
 			$chkScanServices,$chkScanShortcuts,$chkScanPayloads,$chkScanRegistry,$chkQuarantine,$chkUsbHeuristics,$chkDoTasks,$chkDoWmi,$chkDoLnk,$chkSelectAll,
 			$chkAdvKeylog,$chkAdvStartup,$chkAdvHosts,$chkAdvBrowser,$chkAdvPSProf,$chkAdvOpenPorts,$chkAdvProcAnom,$chkAdvEnableActions,$chkAdvClosePorts,$lblRiskPorts,$txtRiskPorts,$lblWarnPorts,$txtWarnPorts,
-			$txtLog,$lstDrives,$txtInlineLog,$txtAdvInlineLog
+			$txtLog,$lstDrives,$txtInlineLog,$txtAdvInlineLog,
+			$grpFix,$txtFixLog,
+			$chkFixHosts,$chkFixProxy,$chkFixDns,$chkFixWinsock,$chkFixFirewall,$chkFixTemp,$chkFixAutorun,$chkFixAssoc,
+			$chkFixBits,$chkFixShell,$chkFixPolicies,$chkFixWU,$chkFixServices,$chkFixBrowser,$chkFixWatchdog,$chkFixReport
 		)) {
 			try { $ctrl.ForeColor = $fg } catch {}
 			try { if ($ctrl -is [System.Windows.Forms.GroupBox] -or $ctrl -is [System.Windows.Forms.TabPage] -or $ctrl -is [System.Windows.Forms.Panel]) { $ctrl.BackColor = $grp } else { $ctrl.BackColor = $bg } } catch {}
@@ -69,14 +75,17 @@ function Set-Theme {
 		$grp = [System.Drawing.Color]::FromArgb(236,239,241)   # açık grup arka plan
 		$form.BackColor = $bg
 		foreach ($ctrl in @(
-			$tabs,$tabClean,$tabLog,$tabAdvanced,
+			$tabs,$tabClean,$tabLog,$tabAdvanced,$tabFix,
 			$grpOptions,$grpActions,$grpAdv,$bottomPanel,
 			$lblStatus,$lblDrives,$txtDrives,$lblDriveStatus,
-			$btnClean,$btnCancel,$btnListDrives,$btnOpenLog,$btnClearLog,$btnScan,$btnManageQ,$btnOpenExcl,$btnOpenQ,$btnRestoreQ,$btnExportCsv,$btnExportHtml,$btnAdvScan,
+			$btnClean,$btnCancel,$btnListDrives,$btnOpenLog,$btnClearLog,$btnScan,$btnManageQ,$btnOpenExcl,$btnOpenQ,$btnRestoreQ,$btnExportCsv,$btnExportHtml,$btnAdvScan,$btnRunFixes,
 			$chkAllRemovable,$chkAggressive,$chkIncludeFixed,$chkIncludeSystem,$chkWhatIf,$chkDarkTheme,
 			$chkScanServices,$chkScanShortcuts,$chkScanPayloads,$chkScanRegistry,$chkQuarantine,$chkUsbHeuristics,$chkDoTasks,$chkDoWmi,$chkDoLnk,$chkSelectAll,
 			$chkAdvKeylog,$chkAdvStartup,$chkAdvHosts,$chkAdvBrowser,$chkAdvPSProf,$chkAdvOpenPorts,$chkAdvProcAnom,$chkAdvEnableActions,$chkAdvClosePorts,$lblRiskPorts,$txtRiskPorts,$lblWarnPorts,$txtWarnPorts,
-			$txtLog,$lstDrives,$txtInlineLog,$txtAdvInlineLog
+			$txtLog,$lstDrives,$txtInlineLog,$txtAdvInlineLog,
+			$grpFix,$txtFixLog,
+			$chkFixHosts,$chkFixProxy,$chkFixDns,$chkFixWinsock,$chkFixFirewall,$chkFixTemp,$chkFixAutorun,$chkFixAssoc,
+			$chkFixBits,$chkFixShell,$chkFixPolicies,$chkFixWU,$chkFixServices,$chkFixBrowser,$chkFixWatchdog,$chkFixReport
 		)) {
 			try { $ctrl.ForeColor = $fg } catch {}
 			try { if ($ctrl -is [System.Windows.Forms.GroupBox] -or $ctrl -is [System.Windows.Forms.TabPage] -or $ctrl -is [System.Windows.Forms.Panel]) { $ctrl.BackColor = $grp } else { $ctrl.BackColor = $bg } } catch {}
