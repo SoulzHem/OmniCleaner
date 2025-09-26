@@ -78,6 +78,11 @@ function Initialize-OmniFixTab {
 	$script:chkFixBrowser.AutoSize = $true
 	$script:chkFixBrowser.Location = New-Object System.Drawing.Point(400,160)
 
+	$script:chkFixWatchdog = New-Object System.Windows.Forms.CheckBox
+	$script:chkFixWatchdog.Text = 'Hosts/Proxy watchdog (monitor for 5 minutes after fixes)'
+	$script:chkFixWatchdog.AutoSize = $true
+	$script:chkFixWatchdog.Location = New-Object System.Drawing.Point(400,186)
+
 	$script:btnRunFixes = New-Object System.Windows.Forms.Button
 	$script:btnRunFixes.Text = 'Run fixes'
 	$script:btnRunFixes.Size = New-Object System.Drawing.Size(160,30)
@@ -107,6 +112,7 @@ function Initialize-OmniFixTab {
 		$script:chkFixWU,
 		$script:chkFixServices,
 		$script:chkFixBrowser,
+		$script:chkFixWatchdog,
 		$script:btnRunFixes,
 		$script:txtFixLog
 	))
@@ -141,6 +147,7 @@ function Initialize-OmniFixTab {
 			if ($chkFixWU.Checked)      { $tasks += 'wu' }
 			if ($chkFixServices.Checked){ $tasks += 'services' }
 			if ($chkFixBrowser.Checked) { $tasks += 'browser' }
+			if ($chkFixWatchdog.Checked){ $tasks += 'watchdog' }
             if ($tasks.Count -eq 0) { & $script:AddFixLog 'Select at least one fix.'; return }
 
             & $script:AddFixLog ('Running fixes: ' + ($tasks -join ', '))
@@ -337,6 +344,67 @@ function Initialize-OmniFixTab {
 								
 								say '[OK] Browser proxy/policy hijacks cleaned'
 							} catch { say ("[ERR] Browser cleanup: " + $_.Exception.Message) }
+						}
+						'watchdog' {
+							say '[WATCHDOG] Starting 5-minute monitoring for hosts/proxy changes'
+							try {
+								# Baseline capture
+								$hostsPath = "$env:WinDir\System32\drivers\etc\hosts"
+								$baselineHosts = ""
+								try { $baselineHosts = Get-Content -LiteralPath $hostsPath -Raw -ErrorAction Stop } catch {}
+								
+								$baselineProxy = @{}
+								$proxyKeys = @(
+									"HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings",
+									"HKLM\Software\Microsoft\Windows\CurrentVersion\Internet Settings"
+								)
+								foreach ($k in $proxyKeys) {
+									try {
+										$proxyEnable = (Get-ItemProperty -Path "Registry::$k" -Name "ProxyEnable" -ErrorAction SilentlyContinue).ProxyEnable
+										$proxyServer = (Get-ItemProperty -Path "Registry::$k" -Name "ProxyServer" -ErrorAction SilentlyContinue).ProxyServer
+										$baselineProxy[$k] = @{ Enable=$proxyEnable; Server=$proxyServer }
+									} catch {}
+								}
+								
+								say '[WATCHDOG] Baseline captured, monitoring for 5 minutes...'
+								
+								# Monitor for 5 minutes (300 seconds)
+								$monitorEnd = (Get-Date).AddSeconds(300)
+								$checkCount = 0
+								
+								while ((Get-Date) -lt $monitorEnd) {
+									Start-Sleep -Seconds 30
+									$checkCount++
+									
+									# Check hosts file
+									try {
+										$currentHosts = Get-Content -LiteralPath $hostsPath -Raw -ErrorAction Stop
+										if ($currentHosts -ne $baselineHosts) {
+											say "[WARNING] Hosts file changed! Check for malware re-infection."
+											$baselineHosts = $currentHosts
+										}
+									} catch {}
+									
+									# Check proxy settings
+									foreach ($k in $proxyKeys) {
+										try {
+											$currentEnable = (Get-ItemProperty -Path "Registry::$k" -Name "ProxyEnable" -ErrorAction SilentlyContinue).ProxyEnable
+											$currentServer = (Get-ItemProperty -Path "Registry::$k" -Name "ProxyServer" -ErrorAction SilentlyContinue).ProxyServer
+											
+											if ($baselineProxy[$k].Enable -ne $currentEnable -or $baselineProxy[$k].Server -ne $currentServer) {
+												say "[WARNING] Proxy settings changed in $k! Check for malware re-infection."
+												$baselineProxy[$k] = @{ Enable=$currentEnable; Server=$currentServer }
+											}
+										} catch {}
+									}
+									
+									if ($checkCount % 2 -eq 0) {
+										say "[WATCHDOG] Monitoring... ($checkCount/10 checks completed)"
+									}
+								}
+								
+								say '[OK] Watchdog monitoring completed - no suspicious changes detected'
+							} catch { say ("[ERR] Watchdog: " + $_.Exception.Message) }
 						}
 					}
 				}
