@@ -83,6 +83,11 @@ function Initialize-OmniFixTab {
 	$script:chkFixWatchdog.AutoSize = $true
 	$script:chkFixWatchdog.Location = New-Object System.Drawing.Point(400,186)
 
+	$script:chkFixReport = New-Object System.Windows.Forms.CheckBox
+	$script:chkFixReport.Text = 'Generate fix report (HTML/CSV) with rollback info'
+	$script:chkFixReport.AutoSize = $true
+	$script:chkFixReport.Location = New-Object System.Drawing.Point(400,212)
+
 	$script:btnRunFixes = New-Object System.Windows.Forms.Button
 	$script:btnRunFixes.Text = 'Run fixes'
 	$script:btnRunFixes.Size = New-Object System.Drawing.Size(160,30)
@@ -113,6 +118,7 @@ function Initialize-OmniFixTab {
 		$script:chkFixServices,
 		$script:chkFixBrowser,
 		$script:chkFixWatchdog,
+		$script:chkFixReport,
 		$script:btnRunFixes,
 		$script:txtFixLog
 	))
@@ -148,6 +154,7 @@ function Initialize-OmniFixTab {
 			if ($chkFixServices.Checked){ $tasks += 'services' }
 			if ($chkFixBrowser.Checked) { $tasks += 'browser' }
 			if ($chkFixWatchdog.Checked){ $tasks += 'watchdog' }
+			if ($chkFixReport.Checked)  { $tasks += 'report' }
             if ($tasks.Count -eq 0) { & $script:AddFixLog 'Select at least one fix.'; return }
 
             & $script:AddFixLog ('Running fixes: ' + ($tasks -join ', '))
@@ -405,6 +412,185 @@ function Initialize-OmniFixTab {
 								
 								say '[OK] Watchdog monitoring completed - no suspicious changes detected'
 							} catch { say ("[ERR] Watchdog: " + $_.Exception.Message) }
+						}
+						'report' {
+							say '[REPORT] Generating OmniFix report (HTML/CSV)'
+							try {
+								$timestamp = (Get-Date).ToString('yyyy-MM-dd_HH-mm-ss')
+								$reportDir = Join-Path $env:TEMP "OmniFix_Report_$timestamp"
+								New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
+								
+								# HTML Report
+								$htmlPath = Join-Path $reportDir "OmniFix_Report.html"
+								$html = @"
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OmniFix Report - $timestamp</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #34495e; margin-top: 25px; }
+        .fix-item { background: #ecf0f1; padding: 10px; margin: 5px 0; border-left: 4px solid #3498db; }
+        .rollback { background: #fff3cd; padding: 10px; margin: 5px 0; border-left: 4px solid #ffc107; }
+        .success { color: #27ae60; font-weight: bold; }
+        .warning { color: #f39c12; font-weight: bold; }
+        .error { color: #e74c3c; font-weight: bold; }
+        pre { background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 OmniFix Report</h1>
+        <p><strong>Generated:</strong> $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')</p>
+        <p><strong>Computer:</strong> $env:COMPUTERNAME</p>
+        <p><strong>User:</strong> $env:USERNAME</p>
+        
+        <h2>📋 Applied Fixes</h2>
+"@
+								
+								# Add applied fixes to HTML
+								$appliedFixes = @()
+								if ($selected -contains 'hosts') { 
+									$appliedFixes += "Reset hosts file to default"
+									$html += '<div class="fix-item"><strong>Hosts File:</strong> Reset to default (127.0.0.1 localhost)</div>'
+								}
+								if ($selected -contains 'proxy') { 
+									$appliedFixes += "Disabled system proxy"
+									$html += '<div class="fix-item"><strong>Proxy Settings:</strong> Disabled system proxy and reset WinINET</div>'
+								}
+								if ($selected -contains 'dns') { 
+									$appliedFixes += "Flushed DNS cache"
+									$html += '<div class="fix-item"><strong>DNS:</strong> Flushed cache and reset adapters to DHCP</div>'
+								}
+								if ($selected -contains 'winsock') { 
+									$appliedFixes += "Reset Winsock & TCP/IP"
+									$html += '<div class="fix-item"><strong>Network Stack:</strong> Reset Winsock and TCP/IP (reboot may be required)</div>'
+								}
+								if ($selected -contains 'firewall') { 
+									$appliedFixes += "Reset Windows Firewall"
+									$html += '<div class="fix-item"><strong>Firewall:</strong> Reset Windows Firewall policies</div>'
+								}
+								if ($selected -contains 'temp') { 
+									$appliedFixes += "Cleaned TEMP folders"
+									$html += '<div class="fix-item"><strong>TEMP Cleanup:</strong> Cleaned user and system temp folders</div>'
+								}
+								if ($selected -contains 'autorun') { 
+									$appliedFixes += "Disabled Autorun/Autoplay"
+									$html += '<div class="fix-item"><strong>Autorun:</strong> Disabled autorun and autoplay</div>'
+								}
+								if ($selected -contains 'assoc') { 
+									$appliedFixes += "Repaired file associations"
+									$html += '<div class="fix-item"><strong>File Associations:</strong> Repaired .lnk, .exe, .reg associations</div>'
+								}
+								if ($selected -contains 'bits') { 
+									$appliedFixes += "Repaired BITS/WUA services"
+									$html += '<div class="fix-item"><strong>Services:</strong> Repaired BITS and Windows Update services</div>'
+								}
+								if ($selected -contains 'shell') { 
+									$appliedFixes += "Restored Explorer shell"
+									$html += '<div class="fix-item"><strong>Shell:</strong> Restored Explorer shell and enabled Task Manager</div>'
+								}
+								if ($selected -contains 'policies') { 
+									$appliedFixes += "Cleaned restrictive policies"
+									$html += '<div class="fix-item"><strong>Policies:</strong> Cleaned restrictive registry policies</div>'
+								}
+								if ($selected -contains 'wu') { 
+									$appliedFixes += "Repaired Windows Update"
+									$html += '<div class="fix-item"><strong>Windows Update:</strong> Repaired SoftwareDistribution and catroot2</div>'
+								}
+								if ($selected -contains 'services') { 
+									$appliedFixes += "Verified core services"
+									$html += '<div class="fix-item"><strong>Core Services:</strong> Verified BFE, MpsSvc, Dhcp, Dnscache</div>'
+								}
+								if ($selected -contains 'browser') { 
+									$appliedFixes += "Cleaned browser hijacks"
+									$html += '<div class="fix-item"><strong>Browser:</strong> Cleaned proxy/policy hijacks (IE/Edge/Chrome/Firefox)</div>'
+								}
+								if ($selected -contains 'watchdog') { 
+									$appliedFixes += "Hosts/Proxy monitoring"
+									$html += '<div class="fix-item"><strong>Watchdog:</strong> 5-minute monitoring for hosts/proxy changes</div>'
+								}
+								
+								$html += @"
+        
+        <h2>🔄 Rollback Information</h2>
+        <div class="rollback">
+            <h3>Manual Rollback Commands:</h3>
+            <pre>
+# Restore hosts file (if needed)
+echo "127.0.0.1 localhost" > C:\Windows\System32\drivers\etc\hosts
+echo "::1 localhost" >> C:\Windows\System32\drivers\etc\hosts
+
+# Restore proxy settings (if needed)
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyEnable /t REG_DWORD /d 0 /f
+
+# Restore DNS settings (if needed)
+ipconfig /flushdns
+netsh interface ip set dns "Local Area Connection" dhcp
+
+# Restore Winsock (if needed)
+netsh winsock reset
+netsh int ip reset
+
+# Restore Windows Firewall (if needed)
+netsh advfirewall reset
+
+# Restore autorun (if needed)
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v NoDriveTypeAutoRun /f
+reg delete "HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v NoDriveTypeAutoRun /f
+
+# Restore Task Manager (if needed)
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableTaskMgr /f
+            </pre>
+        </div>
+        
+        <h2>⚠️ Important Notes</h2>
+        <ul>
+            <li>Some fixes may require a system reboot to take full effect</li>
+            <li>Keep this report for reference in case rollback is needed</li>
+            <li>Monitor your system for any unusual behavior after applying fixes</li>
+            <li>Consider running a full antivirus scan after applying these fixes</li>
+        </ul>
+        
+        <h2>📊 System Information</h2>
+        <pre>
+Computer Name: $env:COMPUTERNAME
+User: $env:USERNAME
+OS: $((Get-WmiObject Win32_OperatingSystem).Caption)
+Architecture: $((Get-WmiObject Win32_OperatingSystem).OSArchitecture)
+Total Memory: $([math]::Round((Get-WmiObject Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 2)) GB
+        </pre>
+    </div>
+</body>
+</html>
+"@
+								
+								Set-Content -Path $htmlPath -Value $html -Encoding UTF8
+								
+								# CSV Report
+								$csvPath = Join-Path $reportDir "OmniFix_Report.csv"
+								$csvData = @()
+								foreach ($fix in $appliedFixes) {
+									$csvData += [PSCustomObject]@{
+										Timestamp = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+										Fix = $fix
+										Status = 'Applied'
+										Computer = $env:COMPUTERNAME
+										User = $env:USERNAME
+									}
+								}
+								$csvData | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8
+								
+								say "[OK] Report generated: $reportDir"
+								say "[INFO] HTML: $htmlPath"
+								say "[INFO] CSV: $csvPath"
+								
+								# Try to open the report folder
+								try { Start-Process explorer.exe -ArgumentList $reportDir } catch {}
+								
+							} catch { say ("[ERR] Report generation: " + $_.Exception.Message) }
 						}
 					}
 				}
