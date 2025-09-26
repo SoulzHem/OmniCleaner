@@ -73,6 +73,11 @@ function Initialize-OmniFixTab {
 	$script:chkFixServices.AutoSize = $true
 	$script:chkFixServices.Location = New-Object System.Drawing.Point(400,134)
 
+	$script:chkFixBrowser = New-Object System.Windows.Forms.CheckBox
+	$script:chkFixBrowser.Text = 'Clean browser proxy/policy hijacks (IE/Edge/Chrome/Firefox)'
+	$script:chkFixBrowser.AutoSize = $true
+	$script:chkFixBrowser.Location = New-Object System.Drawing.Point(400,160)
+
 	$script:btnRunFixes = New-Object System.Windows.Forms.Button
 	$script:btnRunFixes.Text = 'Run fixes'
 	$script:btnRunFixes.Size = New-Object System.Drawing.Size(160,30)
@@ -101,6 +106,7 @@ function Initialize-OmniFixTab {
 		$script:chkFixPolicies,
 		$script:chkFixWU,
 		$script:chkFixServices,
+		$script:chkFixBrowser,
 		$script:btnRunFixes,
 		$script:txtFixLog
 	))
@@ -134,6 +140,7 @@ function Initialize-OmniFixTab {
 			if ($chkFixPolicies.Checked){ $tasks += 'policies' }
 			if ($chkFixWU.Checked)      { $tasks += 'wu' }
 			if ($chkFixServices.Checked){ $tasks += 'services' }
+			if ($chkFixBrowser.Checked) { $tasks += 'browser' }
             if ($tasks.Count -eq 0) { & $script:AddFixLog 'Select at least one fix.'; return }
 
             & $script:AddFixLog ('Running fixes: ' + ($tasks -join ', '))
@@ -280,6 +287,56 @@ function Initialize-OmniFixTab {
 								} catch { say ("[ERR] Service " + $s.Name + ": " + $_.Exception.Message) }
 							}
 							say '[OK] Core services verified'
+						}
+						'browser' {
+							say '[FIX] Cleaning browser proxy/policy hijacks'
+							try {
+								# IE/Edge proxy settings
+								$ieKeys = @(
+									"HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings",
+									"HKLM\Software\Microsoft\Windows\CurrentVersion\Internet Settings"
+								)
+								foreach ($k in $ieKeys) {
+									try { reg add $k /v ProxyEnable /t REG_DWORD /d 0 /f | Out-Null } catch {}
+									try { reg delete $k /v ProxyServer /f 2>$null | Out-Null } catch {}
+									try { reg delete $k /v AutoConfigURL /f 2>$null | Out-Null } catch {}
+									try { reg add $k /v AutoDetect /t REG_DWORD /d 1 /f | Out-Null } catch {}
+								}
+								
+								# Chrome policies (safe cleanup)
+								$chromeKeys = @(
+									"HKCU\Software\Policies\Google\Chrome",
+									"HKLM\Software\Policies\Google\Chrome"
+								)
+								foreach ($k in $chromeKeys) {
+									try { reg delete $k /v ProxyMode /f 2>$null | Out-Null } catch {}
+									try { reg delete $k /v ProxyServer /f 2>$null | Out-Null } catch {}
+									try { reg delete $k /v ProxyPacUrl /f 2>$null | Out-Null } catch {}
+								}
+								
+								# Firefox policies (safe cleanup)
+								$ffKeys = @(
+									"HKCU\Software\Policies\Mozilla\Firefox",
+									"HKLM\Software\Policies\Mozilla\Firefox"
+								)
+								foreach ($k in $ffKeys) {
+									try { reg delete $k /v ProxyMode /f 2>$null | Out-Null } catch {}
+									try { reg delete $k /v ProxyServer /f 2>$null | Out-Null } catch {}
+								}
+								
+								# Edge policies (safe cleanup)
+								$edgeKeys = @(
+									"HKCU\Software\Policies\Microsoft\Edge",
+									"HKLM\Software\Policies\Microsoft\Edge"
+								)
+								foreach ($k in $edgeKeys) {
+									try { reg delete $k /v ProxyMode /f 2>$null | Out-Null } catch {}
+									try { reg delete $k /v ProxyServer /f 2>$null | Out-Null } catch {}
+									try { reg delete $k /v ProxyPacUrl /f 2>$null | Out-Null } catch {}
+								}
+								
+								say '[OK] Browser proxy/policy hijacks cleaned'
+							} catch { say ("[ERR] Browser cleanup: " + $_.Exception.Message) }
 						}
 					}
 				}
